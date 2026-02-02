@@ -16,7 +16,7 @@ const JUDGE_CREDENTIALS = {
 };
 
 // 3. APPS SCRIPT SUBMIT URL
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbygHMA5SXNX0UYqbBgV78dkfjkQF7VxXxReEaqRvExANvg8WFh25Lr2V873KfGbTQtv8g/exec";
+const APPS_SCRIPT_URL = "";
 
 
 // ============================================================
@@ -187,24 +187,26 @@ export default function JudgingApp() {
         // Mark categories as submitted if they have votes
         const completedCats = new Set();
         Object.keys(data.votes).forEach(catName => {
-          // Find the category ID from the name
-          const cat = categories.find(c => c.name === catName);
-          if (cat) completedCats.add(cat.id);
+          // Convert category name to ID format (lowercase, underscores)
+          const catId = catName.toLowerCase().replace(/[^a-z0-9]/g, "_");
+          completedCats.add(catId);
         });
         setSubmittedCats(completedCats);
       }
     } catch (e) {
       console.error("Failed to load judge history:", e);
     }
-  }, [categories]);
+  }, []);
 
   // ── Login ──
   const handleLogin = async () => {
     if (JUDGE_CREDENTIALS[judgeId] === judgeToken) {
       setLoginError("");
-      setPhase("browse");
+      setPhase("loading"); // Show loading state while we fetch data
       await loadData();
+      // Load judge history after categories are loaded
       await loadJudgeHistory(judgeId);
+      setPhase("browse");
     } else {
       setLoginError("Invalid judge ID or access code.");
     }
@@ -356,8 +358,8 @@ export default function JudgingApp() {
   }
 
   // ── BROWSE ──
-  if (phase === "browse") {
-    if (dataLoading) return (
+  if (phase === "browse" || phase === "loading") {
+    if (dataLoading || phase === "loading") return (
       <div style={S.app}><div style={S.grain} />
         <header style={S.header}><span style={S.hTitle}>Photojournalism Awards</span></header>
         <div style={S.center}>Loading categories…</div>
