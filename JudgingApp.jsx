@@ -1,21 +1,13 @@
 import { useState, useCallback } from "react";
 
 // ============================================================
-// CONFIGURATION — edit these three values for your contest
+// CONFIGURATION — edit these values for your contest
 // ============================================================
 
 // 1. GOOGLE SHEET URL
-//    Steps to get this:
-//    - Open your Google Sheet
-//    - Click Share → "Publish to web" (not the normal Share button)
-//    - Select your sheet tab, choose "Comma-separated values (.csv)"
-//    - Click Publish, copy that URL, paste it below
 const GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ1AbQ9LAKbKBaA-929jQu1bcbdwMtk2XFpMJuj4vKaxzvMOg6ZLBxr3jJPKYKmr9l8sYA9svKTVglr/pub?gid=0&single=true&output=csv";
-// Example: "https://docs.google.com/spreadsheets/d/YOUR_ID/export?format=csv&gid=0"
 
 // 2. JUDGE CREDENTIALS
-//    Keys = judge IDs, values = access codes.
-//    Share each judge's ID + code privately (email, text, etc.)
 const JUDGE_CREDENTIALS = {
   judge1: "alpha",
   judge2: "beta",
@@ -24,16 +16,11 @@ const JUDGE_CREDENTIALS = {
 };
 
 // 3. APPS SCRIPT SUBMIT URL
-//    After deploying your Apps Script (see the guide I'll provide),
-//    paste the deployment URL here:
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbygHMA5SXNX0UYqbBgV78dkfjkQF7VxXxReEaqRvExANvg8WFh25Lr2V873KfGbTQtv8g/exec";
+const APPS_SCRIPT_URL = "";
 
 
 // ============================================================
 // PLACEHOLDER DATA
-//   This is used when GOOGLE_SHEET_CSV_URL is empty so you can
-//   preview the app right now. Once your Sheet is connected,
-//   this block is ignored entirely — safe to leave or delete.
 // ============================================================
 const PLACEHOLDER_CATEGORIES = [
   { id: "animal",       name: "Animal",                        count: 5  },
@@ -86,12 +73,9 @@ function makePlaceholderEntries(catId, count) {
 
 // ============================================================
 // CSV PARSER
-//   Expects columns: Category | EntryID | Title | Filmmaker | Description | VideoURL
-//   Handles quoted fields (commas inside descriptions are fine).
 // ============================================================
 function parseCSV(csv) {
   const lines = csv.trim().split("\n");
-  // Parse a single CSV line, respecting quoted fields
   const parseLine = (line) => {
     const cols = [];
     let cur = "", inQ = false;
@@ -114,7 +98,7 @@ function parseCSV(csv) {
   const descIdx  = colIdx("description");
   const vidIdx   = colIdx("videourl");
 
-  const catMap = new Map(); // preserves insertion order
+  const catMap = new Map();
   lines.slice(1).forEach((line) => {
     if (!line.trim()) return;
     const cols = parseLine(line);
@@ -154,7 +138,7 @@ const PLACE_COLORS = {
 // ============================================================
 export default function JudgingApp() {
   // ── State ──
-  const [phase, setPhase]                     = useState("login"); // login | browse | judge | submitted
+  const [phase, setPhase]                     = useState("login");
   const [judgeId, setJudgeId]                 = useState("");
   const [judgeToken, setJudgeToken]           = useState("");
   const [loginError, setLoginError]           = useState("");
@@ -162,12 +146,13 @@ export default function JudgingApp() {
   const [dataLoading, setDataLoading]         = useState(false);
   const [dataError, setDataError]             = useState("");
   const [selectedCategory, setSelectedCategory] = useState(null);
-  const [votes, setVotes]                     = useState({});           // { entryId: placeNumber }
+  const [votes, setVotes]                     = useState({});
   const [expandedEntry, setExpandedEntry]     = useState(null);
   const [submitLoading, setSubmitLoading]     = useState(false);
-  const [submittedCats, setSubmittedCats]     = useState(new Set());    // categories judged this session
+  const [submittedCats, setSubmittedCats]     = useState(new Set());
+  const [judgeHistory, setJudgeHistory]       = useState(null); // NEW: stores judge's previous votes
 
-  // ── Data Loading ──
+  // ── Load Data ──
   const loadData = useCallback(async () => {
     setDataLoading(true);
     setDataError("");
@@ -177,7 +162,6 @@ export default function JudgingApp() {
         if (!res.ok) throw new Error("Sheet fetch failed");
         setCategories(parseCSV(await res.text()));
       } else {
-        // Use placeholders
         setCategories(
           PLACEHOLDER_CATEGORIES.map((c) => ({
             id: c.id, name: c.name,
@@ -192,12 +176,35 @@ export default function JudgingApp() {
     setDataLoading(false);
   }, []);
 
+  // ── Load Judge History ──
+  const loadJudgeHistory = useCallback(async (jid) => {
+    if (!APPS_SCRIPT_URL) return;
+    try {
+      const res = await fetch(`${APPS_SCRIPT_URL}?judgeId=${encodeURIComponent(jid)}`);
+      const data = await res.json();
+      if (data.status === "success" && data.votes) {
+        setJudgeHistory(data.votes);
+        // Mark categories as submitted if they have votes
+        const completedCats = new Set();
+        Object.keys(data.votes).forEach(catName => {
+          // Find the category ID from the name
+          const cat = categories.find(c => c.name === catName);
+          if (cat) completedCats.add(cat.id);
+        });
+        setSubmittedCats(completedCats);
+      }
+    } catch (e) {
+      console.error("Failed to load judge history:", e);
+    }
+  }, [categories]);
+
   // ── Login ──
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (JUDGE_CREDENTIALS[judgeId] === judgeToken) {
       setLoginError("");
       setPhase("browse");
-      loadData();
+      await loadData();
+      await loadJudgeHistory(judgeId);
     } else {
       setLoginError("Invalid judge ID or access code.");
     }
@@ -207,9 +214,7 @@ export default function JudgingApp() {
   const toggleVote = (entryId, place) => {
     setVotes((prev) => {
       const next = { ...prev };
-      // Remove any other entry that currently holds this place
       Object.keys(next).forEach((k) => { if (next[k] === place) delete next[k]; });
-      // Toggle: if this entry already has this place, unset it; otherwise set it
       if (next[entryId] === place) delete next[entryId];
       else next[entryId] = place;
       return next;
@@ -218,6 +223,25 @@ export default function JudgingApp() {
 
   const isPlaceTaken  = (place)   => Object.values(votes).includes(place);
   const getEntryPlace = (entryId) => votes[entryId] || null;
+
+  // ── Category Selection (with history pre-fill) ──
+  const handleCategorySelect = (cat) => {
+    setSelectedCategory(cat);
+    setExpandedEntry(null);
+    
+    // Pre-fill votes if this judge already voted on this category
+    if (judgeHistory && judgeHistory[cat.name]) {
+      const previousVotes = {};
+      judgeHistory[cat.name].forEach(v => {
+        previousVotes[v.entryId] = v.place;
+      });
+      setVotes(previousVotes);
+    } else {
+      setVotes({});
+    }
+    
+    setPhase("judge");
+  };
 
   // ── Submit ──
   const handleSubmit = async () => {
@@ -240,7 +264,7 @@ export default function JudgingApp() {
           body: JSON.stringify(payload),
         });
       } else {
-        await new Promise((r) => setTimeout(r, 1200)); // demo delay
+        await new Promise((r) => setTimeout(r, 1200));
       }
       setSubmittedCats((prev) => new Set([...prev, selectedCategory.id]));
       setPhase("submitted");
@@ -252,9 +276,7 @@ export default function JudgingApp() {
   };
 
 
-  // ============================================================
-  // STYLES
-  // ============================================================
+  // ── STYLES ──
   const S = {
     app:        { minHeight: "100vh", background: "#0f0f0f", color: "#e8e4df", fontFamily: "'Georgia', serif", position: "relative" },
     grain:      { position: "fixed", inset: 0, opacity: 0.035, pointerEvents: "none", zIndex: 100, backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")` },
@@ -264,26 +286,21 @@ export default function JudgingApp() {
     hero:       { padding: "56px 24px 40px", maxWidth: 820, margin: "0 auto", textAlign: "center" },
     heroTitle:  { fontSize: "clamp(26px, 4vw, 40px)", fontWeight: 400, letterSpacing: "-0.5px", lineHeight: 1.2, color: "#e8e4df", marginBottom: 8 },
     heroSub:    { fontSize: "14px", color: "#6b6560", lineHeight: 1.7, maxWidth: 460, margin: "0 auto" },
-    // Login
     loginBox:   { maxWidth: 380, margin: "28px auto 0", background: "#181614", border: "1px solid #2a2a2a", borderRadius: 8, padding: "32px 28px" },
     label:      { display: "block", fontSize: "10px", letterSpacing: "2px", textTransform: "uppercase", color: "#6b6560", marginBottom: 6, marginTop: 18 },
     input:      { width: "100%", background: "#0f0f0f", border: "1px solid #2a2a2a", borderRadius: 5, padding: "10px 13px", color: "#e8e4df", fontSize: "15px", fontFamily: "'Georgia', serif", outline: "none", boxSizing: "border-box" },
     loginErr:   { color: "#c0504d", fontSize: "13px", marginTop: 12, fontStyle: "italic" },
     btn:        { display: "block", width: "100%", marginTop: 24, padding: "12px", background: "#d4a017", border: "none", borderRadius: 5, color: "#1a1a1a", fontSize: "11px", letterSpacing: "2.5px", textTransform: "uppercase", fontFamily: "'Georgia', serif", fontWeight: 600, cursor: "pointer" },
-    // Categories
     catGrid:    { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(210px, 1fr))", gap: 10, maxWidth: 820, margin: "0 auto", padding: "0 24px" },
     catCard:    (done) => ({ background: done ? "#1a2518" : "#181614", border: `1px solid ${done ? "#2d4a2d" : "#2a2a2a"}`, borderRadius: 8, padding: "22px 18px", cursor: "pointer", transition: "all 0.2s", position: "relative" }),
     catName:    { fontSize: "15px", fontWeight: 400, color: "#e8e4df", marginBottom: 3 },
     catCount:   { fontSize: "11px", color: "#4a4540", letterSpacing: "0.5px" },
     catDone:    { position: "absolute", top: 10, right: 12, fontSize: "10px", color: "#6aaa6a", letterSpacing: "1px" },
-    // Navigation
     backNav:    { padding: "24px 24px 0", maxWidth: 820, margin: "0 auto" },
     backBtn:    { background: "none", border: "none", color: "#6b6560", fontSize: "13px", letterSpacing: "1px", cursor: "pointer", fontFamily: "'Georgia', serif", padding: 0, transition: "color 0.2s" },
-    // Judge layout
     judgeWrap:  { maxWidth: 820, margin: "0 auto", padding: "18px 24px 100px" },
     catTitle:   { fontSize: "clamp(20px, 3.2vw, 30px)", fontWeight: 400, color: "#e8e4df", marginBottom: 3 },
     catMeta:    { fontSize: "11px", color: "#4a4540", letterSpacing: "0.5px", marginBottom: 28 },
-    // Entry cards
     card:       (p) => ({ background: "#181614", border: `1px solid ${p ? PLACE_COLORS[p].border : "#2a2a2a"}`, borderRadius: 8, overflow: "hidden", marginBottom: 12, transition: "border-color 0.2s" }),
     thumbWrap:  { width: "100%", aspectRatio: "16/9", background: "#141210", cursor: "pointer", position: "relative", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" },
     playCircle: { width: 44, height: 44, borderRadius: "50%", background: "rgba(212,160,23,0.88)", display: "flex", alignItems: "center", justifyContent: "center", position: "relative", zIndex: 1, boxShadow: "0 3px 16px rgba(0,0,0,0.4)" },
@@ -302,24 +319,18 @@ export default function JudgingApp() {
       cursor: disabled && !active ? "not-allowed" : "pointer",
       opacity: disabled && !active ? 0.3 : 1, transition: "all 0.18s",
     }),
-    // Fixed submit bar
     submitBar:  { position: "fixed", bottom: 0, left: 0, right: 0, background: "rgba(15,15,15,0.93)", backdropFilter: "blur(12px)", borderTop: "1px solid #2a2a2a", padding: "14px 24px", display: "flex", alignItems: "center", justifyContent: "center", gap: 18, zIndex: 40 },
     submitInfo: { fontSize: "11px", color: "#5a5550", letterSpacing: "0.5px" },
     submitOn:   { padding: "10px 28px", background: "#d4a017", border: "none", borderRadius: 5, color: "#1a1a1a", fontSize: "11px", letterSpacing: "2px", textTransform: "uppercase", fontFamily: "'Georgia', serif", fontWeight: 600, cursor: "pointer" },
     submitOff:  { padding: "10px 28px", background: "#222", border: "none", borderRadius: 5, color: "#4a4540", fontSize: "11px", letterSpacing: "2px", textTransform: "uppercase", fontFamily: "'Georgia', serif", fontWeight: 600, cursor: "not-allowed" },
-    // Success
     successIcon:  { fontSize: "40px", display: "block", marginBottom: 16 },
     successTitle: { fontSize: "24px", fontWeight: 400, color: "#e8e4df", marginBottom: 6 },
     successSub:   { fontSize: "14px", color: "#6b6560", lineHeight: 1.7, maxWidth: 400, margin: "0 auto" },
     smallBtn:     { display: "inline-block", marginTop: 22, padding: "8px 20px", background: "transparent", border: "1px solid #3a3a3a", borderRadius: 5, color: "#8a8580", fontSize: "11px", letterSpacing: "1.5px", textTransform: "uppercase", fontFamily: "'Georgia', serif", cursor: "pointer", transition: "all 0.2s" },
-    // Utility
     center:     { textAlign: "center", padding: "80px 24px", color: "#6b6560", fontSize: "14px" },
   };
 
-
-  // ============================================================
-  // RENDER — LOGIN
-  // ============================================================
+  // ── LOGIN ──
   if (phase === "login") {
     return (
       <div style={S.app}>
@@ -344,9 +355,7 @@ export default function JudgingApp() {
     );
   }
 
-  // ============================================================
-  // RENDER — BROWSE CATEGORIES
-  // ============================================================
+  // ── BROWSE ──
   if (phase === "browse") {
     if (dataLoading) return (
       <div style={S.app}><div style={S.grain} />
@@ -379,7 +388,7 @@ export default function JudgingApp() {
               <div
                 key={cat.id}
                 style={S.catCard(done)}
-                onClick={() => { setSelectedCategory(cat); setVotes({}); setExpandedEntry(null); setPhase("judge"); }}
+                onClick={() => handleCategorySelect(cat)}
                 onMouseEnter={(e) => { e.currentTarget.style.borderColor = done ? "#4a7a4a" : "#d4a017"; e.currentTarget.style.transform = "translateY(-2px)"; }}
                 onMouseLeave={(e) => { e.currentTarget.style.borderColor = done ? "#2d4a2d" : "#2a2a2a"; e.currentTarget.style.transform = "translateY(0)"; }}
               >
@@ -394,9 +403,7 @@ export default function JudgingApp() {
     );
   }
 
-  // ============================================================
-  // RENDER — JUDGING
-  // ============================================================
+  // ── JUDGING ──
   if (phase === "judge" && selectedCategory) {
     const placesAssigned = Object.keys(votes).length;
     const ready = placesAssigned === 3;
@@ -425,8 +432,6 @@ export default function JudgingApp() {
 
             return (
               <div key={entry.id} style={S.card(myPlace)}>
-
-                {/* ── Thumbnail row ── */}
                 <div style={S.thumbWrap} onClick={() => setExpandedEntry(isExpanded ? null : entry.id)}>
                   <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg, #1e1c18 0%, #141210 100%)" }} />
                   <div style={S.playCircle}>
@@ -442,7 +447,6 @@ export default function JudgingApp() {
                   </span>
                 </div>
 
-                {/* ── Expanded video area ── */}
                 {isExpanded && (
                   <div style={{ background: "#111", borderTop: "1px solid #222", padding: 14 }}>
                     {entry.videoUrl ? (
@@ -457,11 +461,10 @@ export default function JudgingApp() {
                   </div>
                 )}
 
-                {/* ── Info + Vote buttons ── */}
                 <div style={S.entryInfo}>
-                  <div style={S.entryTitle}>{entry.title}</div>
-                  <div style={S.entryFm}>by {entry.filmmaker}</div>
-                  <div style={S.entryDesc}>{entry.description}</div>
+                  <div style={S.entryTitle}>{entry.title || entry.id}</div>
+                  <div style={S.entryFm}>{entry.filmmaker ? `by ${entry.filmmaker}` : ""}</div>
+                  {entry.description && <div style={S.entryDesc}>{entry.description}</div>}
                   <div style={S.voteRow}>
                     {[1, 2, 3].map((place) => {
                       const active   = myPlace === place;
@@ -484,7 +487,6 @@ export default function JudgingApp() {
           })}
         </div>
 
-        {/* ── Fixed bottom submit bar ── */}
         <div style={S.submitBar}>
           <span style={S.submitInfo}>{placesAssigned} of 3 places assigned</span>
           <button
@@ -499,9 +501,7 @@ export default function JudgingApp() {
     );
   }
 
-  // ============================================================
-  // RENDER — SUBMITTED CONFIRMATION
-  // ============================================================
+  // ── SUBMITTED ──
   if (phase === "submitted") {
     return (
       <div style={S.app}>
