@@ -16,7 +16,7 @@ const JUDGE_CREDENTIALS = {
 };
 
 // 3. APPS SCRIPT SUBMIT URL
-const APPS_SCRIPT_URL = "";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbygHMA5SXNX0UYqbBgV78dkfjkQF7VxXxReEaqRvExANvg8WFh25Lr2V873KfGbTQtv8g/exec";
 
 
 // ============================================================
