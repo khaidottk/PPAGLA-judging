@@ -16,7 +16,7 @@ const JUDGE_CREDENTIALS = {
 };
 
 // 3. APPS SCRIPT SUBMIT URL
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbygHMA5SXNX0UYqbBgV78dkfjkQF7VxXxReEaqRvExANvg8WFh25Lr2V873KfGbTQtv8g/exec";
+const APPS_SCRIPT_URL = "";
 
 
 // ============================================================
@@ -451,32 +451,58 @@ export default function JudgingApp() {
 
             return (
               <div key={entry.id} style={S.card(myPlace)}>
-                <div style={S.thumbWrap} onClick={() => setExpandedEntry(isExpanded ? null : entry.id)}>
-                  <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg, #1e1c18 0%, #141210 100%)" }} />
-                  <div style={S.playCircle}>
-                    <span style={{ color: "#1a1a1a", fontSize: 17, marginLeft: 2 }}>▶</span>
-                  </div>
-                  {myPlace && (
-                    <span style={{ position: "absolute", top: 8, left: 8, zIndex: 1, background: PLACE_COLORS[myPlace].bg, color: PLACE_COLORS[myPlace].text, fontSize: "9px", fontWeight: 700, letterSpacing: "1.5px", padding: "3px 8px", borderRadius: 3 }}>
-                      {PLACE_LABELS[myPlace].toUpperCase()}
+                {/* Thumbnail / video area */}
+                {!isExpanded && (
+                  <div style={S.thumbWrap} onClick={() => setExpandedEntry(entry.id)}>
+                    <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg, #1e1c18 0%, #141210 100%)" }} />
+                    <div style={S.playCircle}>
+                      <span style={{ color: "#1a1a1a", fontSize: 17, marginLeft: 2 }}>▶</span>
+                    </div>
+                    {myPlace && (
+                      <span style={{ position: "absolute", top: 8, left: 8, zIndex: 1, background: PLACE_COLORS[myPlace].bg, color: PLACE_COLORS[myPlace].text, fontSize: "9px", fontWeight: 700, letterSpacing: "1.5px", padding: "3px 8px", borderRadius: 3 }}>
+                        {PLACE_LABELS[myPlace].toUpperCase()}
+                      </span>
+                    )}
+                    <span style={{ position: "absolute", bottom: 8, right: 10, zIndex: 1, fontSize: "9px", color: "#777", background: "rgba(0,0,0,0.5)", padding: "2px 6px", borderRadius: 3 }}>
+                      ▶ Play
                     </span>
-                  )}
-                  <span style={{ position: "absolute", bottom: 8, right: 10, zIndex: 1, fontSize: "9px", color: "#777", background: "rgba(0,0,0,0.5)", padding: "2px 6px", borderRadius: 3 }}>
-                    {isExpanded ? "▼ Close" : "▶ Play"}
-                  </span>
-                </div>
+                  </div>
+                )}
 
+                {/* Expanded video area */}
                 {isExpanded && (
-                  <div style={{ background: "#111", borderTop: "1px solid #222", padding: 14 }}>
+                  <div style={{ background: "#000", position: "relative", aspectRatio: "16/9" }}>
                     {entry.videoUrl ? (
-                      <iframe src={entry.videoUrl} style={{ width: "100%", aspectRatio: "16/9", border: "none", borderRadius: 4 }} allow="autoplay; fullscreen" title={entry.title} />
+                      <iframe src={entry.videoUrl} style={{ width: "100%", height: "100%", border: "none" }} allow="autoplay; fullscreen" title={entry.title} />
                     ) : (
-                      <div style={{ border: "1px dashed #333", borderRadius: 5, padding: "24px 14px", textAlign: "center" }}>
-                        <div style={{ fontSize: 22, marginBottom: 5 }}>🎬</div>
-                        <div style={{ fontSize: "12px", color: "#5a5550" }}>Video embed goes here</div>
-                        <div style={{ fontSize: "10px", color: "#3a3530", marginTop: 2 }}>Add a Google Drive embed URL in your Sheet's VideoURL column</div>
+                      <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", border: "1px dashed #333" }}>
+                        <div style={{ textAlign: "center" }}>
+                          <div style={{ fontSize: 22, marginBottom: 5 }}>🎬</div>
+                          <div style={{ fontSize: "12px", color: "#5a5550" }}>Video embed goes here</div>
+                          <div style={{ fontSize: "10px", color: "#3a3530", marginTop: 2 }}>Add a Google Drive embed URL in your Sheet</div>
+                        </div>
                       </div>
                     )}
+                    {/* Close button overlay */}
+                    <button
+                      onClick={() => setExpandedEntry(null)}
+                      style={{
+                        position: "absolute",
+                        top: 8,
+                        right: 10,
+                        background: "rgba(0,0,0,0.7)",
+                        border: "1px solid #444",
+                        borderRadius: 4,
+                        color: "#ccc",
+                        fontSize: "11px",
+                        padding: "4px 10px",
+                        cursor: "pointer",
+                        fontFamily: "'Georgia', serif",
+                        letterSpacing: "0.5px",
+                      }}
+                    >
+                      ✕ Close
+                    </button>
                   </div>
                 )}
 
