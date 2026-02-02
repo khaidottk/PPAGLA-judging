@@ -10,7 +10,7 @@ import { useState, useCallback } from "react";
 //    - Click Share → "Publish to web" (not the normal Share button)
 //    - Select your sheet tab, choose "Comma-separated values (.csv)"
 //    - Click Publish, copy that URL, paste it below
-const GOOGLE_SHEET_CSV_URL = "";
+const GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ1AbQ9LAKbKBaA-929jQu1bcbdwMtk2XFpMJuj4vKaxzvMOg6ZLBxr3jJPKYKmr9l8sYA9svKTVglr/pub?gid=0&single=true&output=csv";
 // Example: "https://docs.google.com/spreadsheets/d/YOUR_ID/export?format=csv&gid=0"
 
 // 2. JUDGE CREDENTIALS
