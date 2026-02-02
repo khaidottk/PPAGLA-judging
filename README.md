@@ -1,2 +1,2 @@
 # PPAGLA-judging
-PPAGLA Video Juding
+PPAGLA Video judging
