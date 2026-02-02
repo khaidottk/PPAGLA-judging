@@ -16,7 +16,7 @@ const JUDGE_CREDENTIALS = {
 };
 
 // 3. APPS SCRIPT SUBMIT URL
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbygHMA5SXNX0UYqbBgV78dkfjkQF7VxXxReEaqRvExANvg8WFh25Lr2V873KfGbTQtv8g/exec";
+const APPS_SCRIPT_URL = "";
 
 
 // ============================================================
@@ -178,23 +178,40 @@ export default function JudgingApp() {
 
   // ── Load Judge History ──
   const loadJudgeHistory = useCallback(async (jid) => {
-    if (!APPS_SCRIPT_URL) return;
+    if (!APPS_SCRIPT_URL) {
+      console.log("⚠ APPS_SCRIPT_URL is empty, skipping history load");
+      return;
+    }
+    
+    console.log("📊 Fetching judge history for:", jid);
+    console.log("📊 URL:", `${APPS_SCRIPT_URL}?judgeId=${encodeURIComponent(jid)}`);
+    
     try {
       const res = await fetch(`${APPS_SCRIPT_URL}?judgeId=${encodeURIComponent(jid)}`);
+      console.log("📊 Response status:", res.status);
+      
       const data = await res.json();
+      console.log("📊 Response data:", data);
+      
       if (data.status === "success" && data.votes) {
+        console.log("✓ Judge history loaded:", data.votes);
         setJudgeHistory(data.votes);
+        
         // Mark categories as submitted if they have votes
         const completedCats = new Set();
         Object.keys(data.votes).forEach(catName => {
           // Convert category name to ID format (lowercase, underscores)
           const catId = catName.toLowerCase().replace(/[^a-z0-9]/g, "_");
+          console.log(`  → Category "${catName}" → ID "${catId}"`);
           completedCats.add(catId);
         });
+        console.log("✓ Completed categories:", Array.from(completedCats));
         setSubmittedCats(completedCats);
+      } else {
+        console.log("⚠ No votes found or invalid response format");
       }
     } catch (e) {
-      console.error("Failed to load judge history:", e);
+      console.error("❌ Failed to load judge history:", e);
     }
   }, []);
 
