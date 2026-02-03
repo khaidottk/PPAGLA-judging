@@ -125,11 +125,12 @@ function parseCSV(csv) {
 // ============================================================
 // CONSTANTS
 // ============================================================
-const PLACE_LABELS = { 1: "1st Place", 2: "2nd Place", 3: "3rd Place" };
+const PLACE_LABELS = { 1: "1st Place", 2: "2nd Place", 3: "3rd Place", 4: "Runner-up" };
 const PLACE_COLORS = {
   1: { bg: "#d4a017", text: "#1a1a1a", border: "#b8860b" },
   2: { bg: "#a8a8a8", text: "#1a1a1a", border: "#8a8a8a" },
   3: { bg: "#c87533", text: "#fff",    border: "#a0622a" },
+  4: { bg: "#6b5d54", text: "#fff",    border: "#544840" },
 };
 
 
@@ -146,11 +147,12 @@ export default function JudgingApp() {
   const [dataLoading, setDataLoading]         = useState(false);
   const [dataError, setDataError]             = useState("");
   const [selectedCategory, setSelectedCategory] = useState(null);
-  const [votes, setVotes]                     = useState({});
+  const [votes, setVotes]                     = useState({});          // { entryId: placeNumber }
+  const [firstPlaceComment, setFirstPlaceComment] = useState("");     // Comment for 1st place winner
   const [expandedEntry, setExpandedEntry]     = useState(null);
   const [submitLoading, setSubmitLoading]     = useState(false);
   const [submittedCats, setSubmittedCats]     = useState(new Set());
-  const [judgeHistory, setJudgeHistory]       = useState(null); // NEW: stores judge's previous votes
+  const [judgeHistory, setJudgeHistory]       = useState(null);
 
   // ── Load Data ──
   const loadData = useCallback(async () => {
@@ -184,31 +186,21 @@ export default function JudgingApp() {
     }
     
     console.log("📊 Fetching judge history for:", jid);
-    console.log("📊 URL:", `${APPS_SCRIPT_URL}?judgeId=${encodeURIComponent(jid)}`);
     
     try {
       const res = await fetch(`${APPS_SCRIPT_URL}?judgeId=${encodeURIComponent(jid)}`);
-      console.log("📊 Response status:", res.status);
-      
       const data = await res.json();
-      console.log("📊 Response data:", data);
       
       if (data.status === "success" && data.votes) {
         console.log("✓ Judge history loaded:", data.votes);
         setJudgeHistory(data.votes);
         
-        // Mark categories as submitted if they have votes
         const completedCats = new Set();
         Object.keys(data.votes).forEach(catName => {
-          // Convert category name to ID format (lowercase, underscores)
           const catId = catName.toLowerCase().replace(/[^a-z0-9]/g, "_");
-          console.log(`  → Category "${catName}" → ID "${catId}"`);
           completedCats.add(catId);
         });
-        console.log("✓ Completed categories:", Array.from(completedCats));
         setSubmittedCats(completedCats);
-      } else {
-        console.log("⚠ No votes found or invalid response format");
       }
     } catch (e) {
       console.error("❌ Failed to load judge history:", e);
@@ -219,9 +211,8 @@ export default function JudgingApp() {
   const handleLogin = async () => {
     if (JUDGE_CREDENTIALS[judgeId] === judgeToken) {
       setLoginError("");
-      setPhase("loading"); // Show loading state while we fetch data
+      setPhase("loading");
       await loadData();
-      // Load judge history after categories are loaded
       await loadJudgeHistory(judgeId);
       setPhase("browse");
     } else {
@@ -242,19 +233,26 @@ export default function JudgingApp() {
 
   const isPlaceTaken  = (place)   => Object.values(votes).includes(place);
   const getEntryPlace = (entryId) => votes[entryId] || null;
+  const getFirstPlaceEntry = () => {
+    const entryId = Object.keys(votes).find(k => votes[k] === 1);
+    return entryId ? selectedCategory.entries.find(e => e.id === entryId) : null;
+  };
 
   // ── Category Selection (with history pre-fill) ──
   const handleCategorySelect = (cat) => {
     setSelectedCategory(cat);
     setExpandedEntry(null);
+    setFirstPlaceComment("");
     
-    // Pre-fill votes if this judge already voted on this category
     if (judgeHistory && judgeHistory[cat.name]) {
       const previousVotes = {};
+      let comment = "";
       judgeHistory[cat.name].forEach(v => {
         previousVotes[v.entryId] = v.place;
+        if (v.place === 1 && v.comment) comment = v.comment;
       });
       setVotes(previousVotes);
+      setFirstPlaceComment(comment);
     } else {
       setVotes({});
     }
@@ -271,7 +269,13 @@ export default function JudgingApp() {
       timestamp: new Date().toISOString(),
       votes: Object.entries(votes).map(([entryId, place]) => {
         const entry = selectedCategory.entries.find((e) => e.id === entryId);
-        return { entryId, place, title: entry?.title || "", filmmaker: entry?.filmmaker || "" };
+        return { 
+          entryId, 
+          place, 
+          title: entry?.title || "", 
+          filmmaker: entry?.filmmaker || "",
+          comment: place === 1 ? firstPlaceComment : ""
+        };
       }),
     };
     try {
@@ -308,6 +312,7 @@ export default function JudgingApp() {
     loginBox:   { maxWidth: 380, margin: "28px auto 0", background: "#181614", border: "1px solid #2a2a2a", borderRadius: 8, padding: "32px 28px" },
     label:      { display: "block", fontSize: "10px", letterSpacing: "2px", textTransform: "uppercase", color: "#6b6560", marginBottom: 6, marginTop: 18 },
     input:      { width: "100%", background: "#0f0f0f", border: "1px solid #2a2a2a", borderRadius: 5, padding: "10px 13px", color: "#e8e4df", fontSize: "15px", fontFamily: "'Georgia', serif", outline: "none", boxSizing: "border-box" },
+    textarea:   { width: "100%", background: "#0f0f0f", border: "1px solid #2a2a2a", borderRadius: 5, padding: "10px 13px", color: "#e8e4df", fontSize: "14px", fontFamily: "'Georgia', serif", outline: "none", boxSizing: "border-box", minHeight: "80px", resize: "vertical" },
     loginErr:   { color: "#c0504d", fontSize: "13px", marginTop: 12, fontStyle: "italic" },
     btn:        { display: "block", width: "100%", marginTop: 24, padding: "12px", background: "#d4a017", border: "none", borderRadius: 5, color: "#1a1a1a", fontSize: "11px", letterSpacing: "2.5px", textTransform: "uppercase", fontFamily: "'Georgia', serif", fontWeight: 600, cursor: "pointer" },
     catGrid:    { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(210px, 1fr))", gap: 10, maxWidth: 820, margin: "0 auto", padding: "0 24px" },
@@ -317,7 +322,7 @@ export default function JudgingApp() {
     catDone:    { position: "absolute", top: 10, right: 12, fontSize: "10px", color: "#6aaa6a", letterSpacing: "1px" },
     backNav:    { padding: "24px 24px 0", maxWidth: 820, margin: "0 auto" },
     backBtn:    { background: "none", border: "none", color: "#6b6560", fontSize: "13px", letterSpacing: "1px", cursor: "pointer", fontFamily: "'Georgia', serif", padding: 0, transition: "color 0.2s" },
-    judgeWrap:  { maxWidth: 820, margin: "0 auto", padding: "18px 24px 100px" },
+    judgeWrap:  { maxWidth: 820, margin: "0 auto", padding: "18px 24px 180px" },
     catTitle:   { fontSize: "clamp(20px, 3.2vw, 30px)", fontWeight: 400, color: "#e8e4df", marginBottom: 3 },
     catMeta:    { fontSize: "11px", color: "#4a4540", letterSpacing: "0.5px", marginBottom: 28 },
     card:       (p) => ({ background: "#181614", border: `1px solid ${p ? PLACE_COLORS[p].border : "#2a2a2a"}`, borderRadius: 8, overflow: "hidden", marginBottom: 12, transition: "border-color 0.2s" }),
@@ -329,19 +334,24 @@ export default function JudgingApp() {
     entryDesc:  { fontSize: "13px", color: "#7a7570", lineHeight: 1.55 },
     voteRow:    { display: "flex", gap: 7, marginTop: 12, flexWrap: "wrap" },
     voteBtn:    (place, active, disabled) => ({
-      flex: "1 1 68px", padding: "8px 8px",
+      flex: "1 1 60px", padding: "8px 6px",
       border: `1px solid ${active ? PLACE_COLORS[place].border : "#2a2a2a"}`,
       borderRadius: 5, background: active ? PLACE_COLORS[place].bg : "transparent",
       color: active ? PLACE_COLORS[place].text : disabled ? "#3a3530" : "#8a8580",
-      fontSize: "10px", letterSpacing: "1.5px", textTransform: "uppercase",
+      fontSize: "9px", letterSpacing: "1.2px", textTransform: "uppercase",
       fontFamily: "'Georgia', serif", fontWeight: active ? 600 : 400,
       cursor: disabled && !active ? "not-allowed" : "pointer",
       opacity: disabled && !active ? 0.3 : 1, transition: "all 0.18s",
     }),
-    submitBar:  { position: "fixed", bottom: 0, left: 0, right: 0, background: "rgba(15,15,15,0.93)", backdropFilter: "blur(12px)", borderTop: "1px solid #2a2a2a", padding: "14px 24px", display: "flex", alignItems: "center", justifyContent: "center", gap: 18, zIndex: 40 },
+    commentBox: { marginTop: 20, padding: "16px", background: "#1a1816", border: "1px solid #2d4a2d", borderRadius: 6 },
+    commentLabel: { fontSize: "11px", letterSpacing: "1.5px", textTransform: "uppercase", color: "#6aaa6a", marginBottom: 8, display: "block" },
+    submitBar:  { position: "fixed", bottom: 0, left: 0, right: 0, background: "rgba(15,15,15,0.95)", backdropFilter: "blur(12px)", borderTop: "1px solid #2a2a2a", padding: "14px 24px", zIndex: 40 },
+    submitInner: { maxWidth: 820, margin: "0 auto", display: "flex", flexDirection: "column", gap: 10 },
+    submitRow: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 18 },
     submitInfo: { fontSize: "11px", color: "#5a5550", letterSpacing: "0.5px" },
-    submitOn:   { padding: "10px 28px", background: "#d4a017", border: "none", borderRadius: 5, color: "#1a1a1a", fontSize: "11px", letterSpacing: "2px", textTransform: "uppercase", fontFamily: "'Georgia', serif", fontWeight: 600, cursor: "pointer" },
-    submitOff:  { padding: "10px 28px", background: "#222", border: "none", borderRadius: 5, color: "#4a4540", fontSize: "11px", letterSpacing: "2px", textTransform: "uppercase", fontFamily: "'Georgia', serif", fontWeight: 600, cursor: "not-allowed" },
+    submitWarn: { fontSize: "11px", color: "#c0504d", fontStyle: "italic" },
+    submitOn:   { padding: "10px 28px", background: "#d4a017", border: "none", borderRadius: 5, color: "#1a1a1a", fontSize: "11px", letterSpacing: "2px", textTransform: "uppercase", fontFamily: "'Georgia', serif", fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" },
+    submitOff:  { padding: "10px 28px", background: "#222", border: "none", borderRadius: 5, color: "#4a4540", fontSize: "11px", letterSpacing: "2px", textTransform: "uppercase", fontFamily: "'Georgia', serif", fontWeight: 600, cursor: "not-allowed", whiteSpace: "nowrap" },
     successIcon:  { fontSize: "40px", display: "block", marginBottom: 16 },
     successTitle: { fontSize: "24px", fontWeight: 400, color: "#e8e4df", marginBottom: 6 },
     successSub:   { fontSize: "14px", color: "#6b6560", lineHeight: 1.7, maxWidth: 400, margin: "0 auto" },
@@ -355,7 +365,7 @@ export default function JudgingApp() {
       <div style={S.app}>
         <div style={S.grain} />
         <header style={S.header}>
-          <span style={S.hTitle}>Photojournalism Awards</span>
+          <span style={S.hTitle}>PPAGLA Video Contest</span>
           <span style={S.hRight}>2026</span>
         </header>
         <div style={S.hero}>
@@ -378,13 +388,13 @@ export default function JudgingApp() {
   if (phase === "browse" || phase === "loading") {
     if (dataLoading || phase === "loading") return (
       <div style={S.app}><div style={S.grain} />
-        <header style={S.header}><span style={S.hTitle}>Photojournalism Awards</span></header>
+        <header style={S.header}><span style={S.hTitle}>PPAGLA Video Contest</span></header>
         <div style={S.center}>Loading categories…</div>
       </div>
     );
     if (dataError) return (
       <div style={S.app}><div style={S.grain} />
-        <header style={S.header}><span style={S.hTitle}>Photojournalism Awards</span></header>
+        <header style={S.header}><span style={S.hTitle}>PPAGLA Video Contest</span></header>
         <div style={{ ...S.center, color: "#c0504d" }}>{dataError}</div>
       </div>
     );
@@ -393,12 +403,12 @@ export default function JudgingApp() {
       <div style={S.app}>
         <div style={S.grain} />
         <header style={S.header}>
-          <span style={S.hTitle}>Photojournalism Awards</span>
+          <span style={S.hTitle}>PPAGLA Video Contest</span>
           <span style={S.hRight}>Judging as: {judgeId}</span>
         </header>
         <div style={S.hero}>
           <h1 style={S.heroTitle}>Select a Category</h1>
-          <p style={S.heroSub}>Review all entries in a category, then assign your top three.</p>
+          <p style={S.heroSub}>Review all entries in a category, then assign your top placements.</p>
         </div>
         <div style={S.catGrid}>
           {categories.map((cat) => {
@@ -425,13 +435,14 @@ export default function JudgingApp() {
   // ── JUDGING ──
   if (phase === "judge" && selectedCategory) {
     const placesAssigned = Object.keys(votes).length;
-    const ready = placesAssigned === 3;
+    const ready = placesAssigned === 4 && firstPlaceComment.trim().length > 0;
+    const firstPlaceEntry = getFirstPlaceEntry();
 
     return (
       <div style={S.app}>
         <div style={S.grain} />
         <header style={S.header}>
-          <span style={S.hTitle}>Photojournalism Awards</span>
+          <span style={S.hTitle}>PPAGLA Video Contest</span>
           <span style={S.hRight}>Judging as: {judgeId}</span>
         </header>
 
@@ -443,7 +454,7 @@ export default function JudgingApp() {
 
         <div style={S.judgeWrap}>
           <h1 style={S.catTitle}>{selectedCategory.name}</h1>
-          <div style={S.catMeta}>{selectedCategory.entries.length} entries · Assign 1st, 2nd, and 3rd place</div>
+          <div style={S.catMeta}>{selectedCategory.entries.length} entries · Assign 1st, 2nd, 3rd place, and Runner-up</div>
 
           {selectedCategory.entries.map((entry) => {
             const myPlace   = getEntryPlace(entry.id);
@@ -451,7 +462,6 @@ export default function JudgingApp() {
 
             return (
               <div key={entry.id} style={S.card(myPlace)}>
-                {/* Thumbnail / video area */}
                 {!isExpanded && (
                   <div style={S.thumbWrap} onClick={() => setExpandedEntry(entry.id)}>
                     <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg, #1e1c18 0%, #141210 100%)" }} />
@@ -469,7 +479,6 @@ export default function JudgingApp() {
                   </div>
                 )}
 
-                {/* Expanded video area */}
                 {isExpanded && (
                   <div style={{ background: "#000", position: "relative", aspectRatio: "16/9" }}>
                     {entry.videoUrl ? (
@@ -479,26 +488,16 @@ export default function JudgingApp() {
                         <div style={{ textAlign: "center" }}>
                           <div style={{ fontSize: 22, marginBottom: 5 }}>🎬</div>
                           <div style={{ fontSize: "12px", color: "#5a5550" }}>Video embed goes here</div>
-                          <div style={{ fontSize: "10px", color: "#3a3530", marginTop: 2 }}>Add a Google Drive embed URL in your Sheet</div>
                         </div>
                       </div>
                     )}
-                    {/* Close button overlay */}
                     <button
                       onClick={() => setExpandedEntry(null)}
                       style={{
-                        position: "absolute",
-                        top: 8,
-                        right: 10,
-                        background: "rgba(0,0,0,0.7)",
-                        border: "1px solid #444",
-                        borderRadius: 4,
-                        color: "#ccc",
-                        fontSize: "11px",
-                        padding: "4px 10px",
-                        cursor: "pointer",
-                        fontFamily: "'Georgia', serif",
-                        letterSpacing: "0.5px",
+                        position: "absolute", top: 8, right: 10,
+                        background: "rgba(0,0,0,0.7)", border: "1px solid #444", borderRadius: 4,
+                        color: "#ccc", fontSize: "11px", padding: "4px 10px", cursor: "pointer",
+                        fontFamily: "'Georgia', serif", letterSpacing: "0.5px",
                       }}
                     >
                       ✕ Close
@@ -511,7 +510,7 @@ export default function JudgingApp() {
                   <div style={S.entryFm}>{entry.filmmaker ? `by ${entry.filmmaker}` : ""}</div>
                   {entry.description && <div style={S.entryDesc}>{entry.description}</div>}
                   <div style={S.voteRow}>
-                    {[1, 2, 3].map((place) => {
+                    {[1, 2, 3, 4].map((place) => {
                       const active   = myPlace === place;
                       const disabled = isPlaceTaken(place) && !active;
                       return (
@@ -530,17 +529,41 @@ export default function JudgingApp() {
               </div>
             );
           })}
+
+          {/* 1st Place Comment Box */}
+          {firstPlaceEntry && (
+            <div style={S.commentBox}>
+              <label style={S.commentLabel}>
+                1st Place Comment for "{firstPlaceEntry.title || firstPlaceEntry.id}" *
+              </label>
+              <textarea
+                style={S.textarea}
+                value={firstPlaceComment}
+                onChange={(e) => setFirstPlaceComment(e.target.value)}
+                placeholder="Enter your comment explaining why this entry deserves 1st place..."
+              />
+            </div>
+          )}
         </div>
 
         <div style={S.submitBar}>
-          <span style={S.submitInfo}>{placesAssigned} of 3 places assigned</span>
-          <button
-            style={ready && !submitLoading ? S.submitOn : S.submitOff}
-            disabled={!ready || submitLoading}
-            onClick={handleSubmit}
-          >
-            {submitLoading ? "Submitting…" : "Submit Votes"}
-          </button>
+          <div style={S.submitInner}>
+            <div style={S.submitRow}>
+              <div>
+                <div style={S.submitInfo}>{placesAssigned} of 4 places assigned</div>
+                {placesAssigned === 4 && firstPlaceComment.trim().length === 0 && (
+                  <div style={S.submitWarn}>1st place comment required</div>
+                )}
+              </div>
+              <button
+                style={ready && !submitLoading ? S.submitOn : S.submitOff}
+                disabled={!ready || submitLoading}
+                onClick={handleSubmit}
+              >
+                {submitLoading ? "Submitting…" : "Submit Votes"}
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -552,7 +575,7 @@ export default function JudgingApp() {
       <div style={S.app}>
         <div style={S.grain} />
         <header style={S.header}>
-          <span style={S.hTitle}>Photojournalism Awards</span>
+          <span style={S.hTitle}>PPAGLA Video Contest</span>
           <span style={S.hRight}>Judging as: {judgeId}</span>
         </header>
         <div style={{ ...S.hero, paddingTop: 90, textAlign: "center" }}>
@@ -568,7 +591,7 @@ export default function JudgingApp() {
             style={S.smallBtn}
             onMouseEnter={(e) => { e.target.style.borderColor = "#d4a017"; e.target.style.color = "#d4a017"; }}
             onMouseLeave={(e) => { e.target.style.borderColor = "#3a3a3a"; e.target.style.color = "#8a8580"; }}
-            onClick={() => { setPhase("browse"); setSelectedCategory(null); setVotes({}); }}
+            onClick={() => { setPhase("browse"); setSelectedCategory(null); setVotes({}); setFirstPlaceComment(""); }}
           >
             ← Back to Categories
           </button>
