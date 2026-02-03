@@ -320,6 +320,8 @@ export default function JudgingApp() {
     app:        { minHeight: "100vh", background: "#0f0f0f", color: "#e8e4df", fontFamily: "'Georgia', serif", position: "relative" },
     grain:      { position: "fixed", inset: 0, opacity: 0.035, pointerEvents: "none", zIndex: 100, backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")` },
     header:     { borderBottom: "1px solid #2a2a2a", padding: "18px 24px", display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, background: "#0f0f0f", zIndex: 50 },
+    hLeft:      { display: "flex", alignItems: "center", gap: "12px" },
+    logo:       { height: "28px", width: "auto", opacity: 0.9 },
     hTitle:     { fontSize: "11px", letterSpacing: "3px", textTransform: "uppercase", color: "#6b6560" },
     hRight:     { fontSize: "11px", color: "#4a4540", letterSpacing: "1px" },
     hero:       { padding: "56px 24px 40px", maxWidth: 820, margin: "0 auto", textAlign: "center" },
@@ -381,7 +383,10 @@ export default function JudgingApp() {
       <div style={S.app}>
         <div style={S.grain} />
         <header style={S.header}>
-          <span style={S.hTitle}>PPAGLA Video Contest</span>
+          <div style={S.hLeft}>
+            <img src="./1PPAGLA Logo White.png" alt="PPAGLA" style={S.logo} />
+            <span style={S.hTitle}>PPAGLA Video Contest</span>
+          </div>
           <span style={S.hRight}>2026</span>
         </header>
         <div style={S.hero}>
@@ -404,13 +409,23 @@ export default function JudgingApp() {
   if (phase === "browse" || phase === "loading") {
     if (dataLoading || phase === "loading") return (
       <div style={S.app}><div style={S.grain} />
-        <header style={S.header}><span style={S.hTitle}>PPAGLA Video Contest</span></header>
+        <header style={S.header}>
+          <div style={S.hLeft}>
+            <img src="./1PPAGLA Logo White.png" alt="PPAGLA" style={S.logo} />
+            <span style={S.hTitle}>PPAGLA Video Contest</span>
+          </div>
+        </header>
         <div style={S.center}>Loading categories…</div>
       </div>
     );
     if (dataError) return (
       <div style={S.app}><div style={S.grain} />
-        <header style={S.header}><span style={S.hTitle}>PPAGLA Video Contest</span></header>
+        <header style={S.header}>
+          <div style={S.hLeft}>
+            <img src="./1PPAGLA Logo White.png" alt="PPAGLA" style={S.logo} />
+            <span style={S.hTitle}>PPAGLA Video Contest</span>
+          </div>
+        </header>
         <div style={{ ...S.center, color: "#c0504d" }}>{dataError}</div>
       </div>
     );
@@ -419,7 +434,10 @@ export default function JudgingApp() {
       <div style={S.app}>
         <div style={S.grain} />
         <header style={S.header}>
-          <span style={S.hTitle}>PPAGLA Video Contest</span>
+          <div style={S.hLeft}>
+            <img src="./1PPAGLA Logo White.png" alt="PPAGLA" style={S.logo} />
+            <span style={S.hTitle}>PPAGLA Video Contest</span>
+          </div>
           <span style={S.hRight}>Judging as: {judgeId}</span>
         </header>
         <div style={S.hero}>
@@ -458,7 +476,10 @@ export default function JudgingApp() {
       <div style={S.app}>
         <div style={S.grain} />
         <header style={S.header}>
-          <span style={S.hTitle}>PPAGLA Video Contest</span>
+          <div style={S.hLeft}>
+            <img src="./1PPAGLA Logo White.png" alt="PPAGLA" style={S.logo} />
+            <span style={S.hTitle}>PPAGLA Video Contest</span>
+          </div>
           <span style={S.hRight}>Judging as: {judgeId}</span>
         </header>
 
@@ -591,7 +612,10 @@ export default function JudgingApp() {
       <div style={S.app}>
         <div style={S.grain} />
         <header style={S.header}>
-          <span style={S.hTitle}>PPAGLA Video Contest</span>
+          <div style={S.hLeft}>
+            <img src="./1PPAGLA Logo White.png" alt="PPAGLA" style={S.logo} />
+            <span style={S.hTitle}>PPAGLA Video Contest</span>
+          </div>
           <span style={S.hRight}>Judging as: {judgeId}</span>
         </header>
         <div style={{ ...S.hero, paddingTop: 90, textAlign: "center" }}>
