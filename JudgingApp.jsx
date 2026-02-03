@@ -5,7 +5,7 @@ import { useState, useCallback } from "react";
 // ============================================================
 
 // 1. GOOGLE SHEET URL
-const GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ1AbQ9LAKbKBaA-929jQu1bcbdwMtk2XFpMJuj4vKaxzvMOg6ZLBxr3jJPKYKmr9l8sYA9svKTVglr/pub?gid=0&single=true&output=csv";
+const GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vS7xEPVM87h5fxJZFn6SEd2VxHLEr9VuzDEz0zP09LBMTskcGFIy_FMPr_SLy698cPRpdLVo679m6uD/pub?gid=0&single=true&output=csv";
 
 // 2. JUDGE CREDENTIALS
 const JUDGE_CREDENTIALS = {
