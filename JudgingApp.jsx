@@ -384,7 +384,7 @@ export default function JudgingApp() {
         <div style={S.grain} />
         <header style={S.header}>
           <div style={S.hLeft}>
-            <img src="./1PPAGLA Logo White.png" alt="PPAGLA" style={S.logo} />
+            <img src="/1PPAGLA Logo White.png" alt="PPAGLA" style={S.logo} />
             <span style={S.hTitle}>PPAGLA Video Contest</span>
           </div>
           <span style={S.hRight}>2026</span>
@@ -411,7 +411,7 @@ export default function JudgingApp() {
       <div style={S.app}><div style={S.grain} />
         <header style={S.header}>
           <div style={S.hLeft}>
-            <img src="./1PPAGLA Logo White.png" alt="PPAGLA" style={S.logo} />
+            <img src="/1PPAGLA Logo White.png" alt="PPAGLA" style={S.logo} />
             <span style={S.hTitle}>PPAGLA Video Contest</span>
           </div>
         </header>
@@ -422,7 +422,7 @@ export default function JudgingApp() {
       <div style={S.app}><div style={S.grain} />
         <header style={S.header}>
           <div style={S.hLeft}>
-            <img src="./1PPAGLA Logo White.png" alt="PPAGLA" style={S.logo} />
+            <img src="/1PPAGLA Logo White.png" alt="PPAGLA" style={S.logo} />
             <span style={S.hTitle}>PPAGLA Video Contest</span>
           </div>
         </header>
@@ -435,7 +435,7 @@ export default function JudgingApp() {
         <div style={S.grain} />
         <header style={S.header}>
           <div style={S.hLeft}>
-            <img src="./1PPAGLA Logo White.png" alt="PPAGLA" style={S.logo} />
+            <img src="/1PPAGLA Logo White.png" alt="PPAGLA" style={S.logo} />
             <span style={S.hTitle}>PPAGLA Video Contest</span>
           </div>
           <span style={S.hRight}>Judging as: {judgeId}</span>
@@ -477,7 +477,7 @@ export default function JudgingApp() {
         <div style={S.grain} />
         <header style={S.header}>
           <div style={S.hLeft}>
-            <img src="./1PPAGLA Logo White.png" alt="PPAGLA" style={S.logo} />
+            <img src="/1PPAGLA Logo White.png" alt="PPAGLA" style={S.logo} />
             <span style={S.hTitle}>PPAGLA Video Contest</span>
           </div>
           <span style={S.hRight}>Judging as: {judgeId}</span>
@@ -613,7 +613,7 @@ export default function JudgingApp() {
         <div style={S.grain} />
         <header style={S.header}>
           <div style={S.hLeft}>
-            <img src="./1PPAGLA Logo White.png" alt="PPAGLA" style={S.logo} />
+            <img src="/1PPAGLA Logo White.png" alt="PPAGLA" style={S.logo} />
             <span style={S.hTitle}>PPAGLA Video Contest</span>
           </div>
           <span style={S.hRight}>Judging as: {judgeId}</span>
