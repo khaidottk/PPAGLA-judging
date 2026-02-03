@@ -4,8 +4,14 @@ import { useState, useCallback } from "react";
 // CONFIGURATION — edit these values for your contest
 // ============================================================
 
-// 1. GOOGLE SHEET URL
-const GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ1AbQ9LAKbKBaA-929jQu1bcbdwMtk2XFpMJuj4vKaxzvMOg6ZLBxr3jJPKYKmr9l8sYA9svKTVglr/pub?output=csv";
+// 1. GOOGLE SHEET URL (for ENTRIES - videos and categories)
+//    This sheet contains your video entries organized by category.
+//    Steps to get this URL:
+//    - Open your entries Google Sheet
+//    - Click File → "Publish to web"
+//    - Select your sheet tab, choose "Comma-separated values (.csv)"
+//    - Click Publish, copy that URL, paste it here
+const GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ1AbQ9LAKbKBaA-929jQu1bcbdwMtk2XFpMJuj4vKaxzvMOg6ZLBxr3jJPKYKmr9l8sYA9svKTVglr/pub?gid=0&single=true&output=csv";
 
 // 2. JUDGE CREDENTIALS
 const JUDGE_CREDENTIALS = {
@@ -15,7 +21,10 @@ const JUDGE_CREDENTIALS = {
   judge4: "delta",
 };
 
-// 3. APPS SCRIPT SUBMIT URL
+// 3. APPS SCRIPT URL (for RESULTS - where votes are recorded)
+//    This is the web app URL from the Apps Script attached to your
+//    RESULTS sheet (the sheet where judges' votes get written).
+//    After deploying your Apps Script, paste the deployment URL here:
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbygHMA5SXNX0UYqbBgV78dkfjkQF7VxXxReEaqRvExANvg8WFh25Lr2V873KfGbTQtv8g/exec";
 
 
@@ -289,6 +298,13 @@ export default function JudgingApp() {
       } else {
         await new Promise((r) => setTimeout(r, 1200));
       }
+      
+      // Update local history state so votes are immediately available
+      setJudgeHistory((prev) => ({
+        ...prev,
+        [selectedCategory.name]: payload.votes
+      }));
+      
       setSubmittedCats((prev) => new Set([...prev, selectedCategory.id]));
       setPhase("submitted");
     } catch (e) {
