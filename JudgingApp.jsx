@@ -19,6 +19,7 @@ const JUDGE_CREDENTIALS = {
   judge2: "beta",
   judge3: "gamma",
   judge4: "delta",
+  judge5: "echo",
 };
 
 // 3. APPS SCRIPT URL (for RESULTS - where votes are recorded)
